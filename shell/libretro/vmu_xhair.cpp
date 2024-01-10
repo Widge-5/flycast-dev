@@ -17,6 +17,13 @@
 #include "vmu_xhair.h"
 #include "cfg/option.h"
 
+extern float gunx_ratio;
+extern float guny_ratio;
+extern float gunx_offset;
+extern float guny_offset;
+extern s32 mo_xhair_abs[4];
+extern s32 mo_yhair_abs[4];
+
 const char* VMU_SCREEN_COLOR_NAMES[VMU_NUM_COLORS] = {
 		"DEFAULT_ON",
 		"DEFAULT_OFF",
@@ -116,8 +123,15 @@ float lightgun_crosshair_size = (float)LIGHTGUN_CROSSHAIR_SIZE;
 
 std::pair<float, float> getCrosshairPosition(int playerNum)
 {
-	float fx = lightgun_params[playerNum].x * config::RenderResolution * config::ScreenStretching / 480.f / 100.f;
-	float fy = lightgun_params[playerNum].y * config::RenderResolution / 480.f;
+
+	//float fx = lightgun_params[playerNum].x * config::RenderResolution * config::ScreenStretching / 480.f / 100.f;
+	//float fy = lightgun_params[playerNum].y * config::RenderResolution / 480.f;
+	float fx = mo_xhair_abs[playerNum] * config::RenderResolution * config::ScreenStretching / 480.f / 100.f;
+	float fy = mo_yhair_abs[playerNum] * config::RenderResolution / 480.f;
+
+	//lightgun_params[port].x = mo_x_abs[port];
+	//lightgun_params[port].y = mo_y_abs[port];
+	
 	if (config::Widescreen && config::ScreenStretching == 100 && !config::EmulateFramebuffer)
 		fx += (480.f * 16.f / 9.f - 640.f) / 2.f * config::RenderResolution / 480.f;
 

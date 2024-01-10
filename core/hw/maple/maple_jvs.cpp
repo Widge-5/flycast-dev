@@ -33,6 +33,11 @@
 
 u8 *EEPROM;
 
+extern float gunx_ratio;
+extern float guny_ratio;
+extern int gunx_offset;
+extern int guny_offset;
+
 const u32 naomi_button_mapping[32] = {
 		NAOMI_BTN2_KEY,		// DC_BTN_C
 		NAOMI_BTN1_KEY,		// DC_BTN_B
@@ -1956,8 +1961,10 @@ u32 jvs_io_board::handle_jvs_message(u8 *buffer_in, u32 length_in, u8 *buffer_ou
 								}
 								else
 								{
-									x = inputState.absPos.x * 0xFFFF / 639;
-									y = inputState.absPos.y * 0xFFFF / 479;
+									//x = inputState.absPos.x * 0xFFFF / 639;
+									//y = inputState.absPos.y * 0xFFFF / 479;
+									x = (inputState.absPos.x - (gunx_offset / 100 * 640)) * 0x10000 / 640 / gunx_ratio;
+									y = (inputState.absPos.y - (guny_offset / 100 * 480)) * 0x10000 / 480 / gunx_ratio;
 								}
 								LOGJVS("x,y:%4x,%4x ", x, y);
 								JVS_OUT(x >> 8);		// X, MSB

@@ -118,6 +118,11 @@ static bool digital_triggers = false;
 static bool allow_service_buttons = false;
 static bool haveCardReader;
 
+float gunx_ratio = 1.0;
+float guny_ratio = 1.0;
+float gunx_offset = 0;
+float guny_offset = 0;
+
 static bool libretro_supports_bitmasks = false;
 
 static bool categoriesSupported = false;
@@ -157,6 +162,8 @@ std::mutex relPosMutex;
 // but may be outside this range if the pointer is offscreen or outside the 4:3 window.
 s32 mo_x_abs[4];
 s32 mo_y_abs[4];
+s32 mo_xhair_abs[4];
+s32 mo_yhair_abs[4];
 
 static bool enable_purupuru = true;
 static u32 vib_stop_time[4];
@@ -923,6 +930,31 @@ static void update_variables(bool first_startup)
 	char key[256];
 	key[0] = '\0';
 
+   var.key = CORE_OPTION_NAME "_gunx_ratio";
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      gunx_ratio = atof(var.value);
+   }
+   var.key = CORE_OPTION_NAME "_guny_ratio";
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      guny_ratio = atof(var.value);
+   }
+   var.key = CORE_OPTION_NAME "_gunx_offset";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      gunx_offset = atof(var.value);
+   }
+
+   var.key = CORE_OPTION_NAME "_guny_offset";
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      guny_offset = atof(var.value);
+   }
+	
+	
 	var.key = key ;
 	for (int i = 0 ; i < 4 ; i++)
 	{
@@ -2388,8 +2420,10 @@ static void get_analog_stick( retro_input_state_t input_state_cb,
                        s8* p_analog_y )
 {
    int analog_x, analog_y;
-   analog_x = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_X );
-   analog_y = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_Y );
+   //analog_x = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_X );
+   //analog_y = input_state_cb( player_index, RETRO_DEVICE_ANALOG, stick, RETRO_DEVICE_ID_ANALOG_Y );
+   analog_x = (gunx_ratio * (input_state_cb( player_index, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X)) + (gunx_offset / 100.f * 640.f));
+   analog_y = (guny_ratio * (input_state_cb( player_index, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y)) + (guny_offset / 100.f * 480.f));
 
    // Analog stick deadzone (borrowed code from parallel-n64 core)
    if ( astick_deadzone > 0 )
@@ -2564,10 +2598,20 @@ static void updateLightgunCoordinates(u32 port)
 		y = input_cb(port, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 	}
 	if (config::Widescreen && config::ScreenStretching == 100 && !config::EmulateFramebuffer)
-		mo_x_abs[port] = 640.f * ((x + 0x8000) * 4.f / 3.f / 0x10000 - (4.f / 3.f - 1.f) / 2.f);
+	{
+		//mo_x_abs[port] = 640.f * ((x + 0x8000) * 4.f / 3.f / 0x10000 - (4.f / 3.f - 1.f) / 2.f);
+		mo_xhair_abs[port] = 640.f * ((x + 0x8000) * 4.f / 3.f / 0x10000 - (4.f / 3.f - 1.f) / 2.f);
+		mo_x_abs[port] = gunx_ratio * ((640.f * ((x + 0x8000) * 4.f / 3.f / 0x10000 - (4.f / 3.f - 1.f) / 2.f)) + (gunx_offset / 100.f * 640.f));
+	}
 	else
-		mo_x_abs[port] = (x + 0x8000) * 640.f / 0x10000;
-	mo_y_abs[port] = (y + 0x8000) * 480.f / 0x10000;
+	{
+		//mo_x_abs[port] = (x + 0x8000) * 640.f / 0x10000;
+		mo_xhair_abs[port] = (x + 0x8000) * 640.f / 0x10000;
+		mo_x_abs[port] = gunx_ratio * ((x + 0x8000) * 640.f / 0x10000) + (gunx_offset / 100.f * 640.f);
+	}
+	//mo_y_abs[port] = (y + 0x8000) * 480.f / 0x10000;
+	mo_yhair_abs[port] = (y + 0x8000) * 480.f / 0x10000;
+	mo_y_abs[port] = guny_ratio * ((y + 0x8000) * 480.f / 0x10000) + (guny_offset / 100.f * 480.f);
 
 	lightgun_params[port].offscreen = false;
 	lightgun_params[port].x = mo_x_abs[port];
@@ -2966,7 +3010,9 @@ static void UpdateInputState(u32 port)
 				ret = getBitmask(port, RETRO_DEVICE_TWINSTICK);
 
 				// LX
-				analog = input_cb( port, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X );
+				//analog = input_cb( port, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X );
+				analog = (gunx_ratio * (input_cb( port, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X)) + (gunx_offset / 100.f * 640.f));
+				
 				if ( analog < -thresh )
 					kcode[port] &= ~DC_DPAD_LEFT;
 				else if ( analog > thresh )
@@ -2979,7 +3025,8 @@ static void UpdateInputState(u32 port)
 				}
 
 				// LY
-				analog = input_cb( port, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y );
+				//analog = input_cb( port, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y );
+				analog = (guny_ratio * (input_cb(port, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y)) + (guny_offset / 100.f * 480.f));
 				if ( analog < -thresh )
 					kcode[port] &= ~DC_DPAD_UP;
 				else if ( analog > thresh )
